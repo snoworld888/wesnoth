@@ -31,6 +31,7 @@
 #include "color.hpp"
 #include "config_assign.hpp"
 #include "construct_dialog.hpp"
+#include "credentials.hpp"
 #include "display_chat_manager.hpp"
 #include "font/standard_colors.hpp"
 #include "formatter.hpp"

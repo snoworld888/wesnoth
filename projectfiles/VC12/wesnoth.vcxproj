@@ -739,6 +739,7 @@
     <ClCompile Include="..\..\src\construct_dialog.cpp" />
     <ClCompile Include="..\..\src\controller_base.cpp" />
     <ClCompile Include="..\..\src\countdown_clock.cpp" />
+    <ClCompile Include="..\..\src\credentials.cpp" />
     <ClCompile Include="..\..\src\cursor.cpp" />
     <ClCompile Include="..\..\src\desktop\clipboard.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)Desktop\</ObjectFileName>
@@ -3429,6 +3430,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\credentials.hpp" />
     <ClInclude Include="..\..\src\about.hpp" />
     <ClInclude Include="..\..\src\actions\advancement.hpp" />
     <ClInclude Include="..\..\src\actions\attack.hpp" />

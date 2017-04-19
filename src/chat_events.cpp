@@ -22,6 +22,7 @@
 #include "chat_command_handler.hpp"
 #include "preferences.hpp"
 #include "game_preferences.hpp"
+#include "credentials.hpp"
 
 #include <boost/range/algorithm/find_if.hpp>
 

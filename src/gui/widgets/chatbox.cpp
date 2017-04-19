@@ -36,6 +36,7 @@
 #include "config_assign.hpp"
 #include "game_preferences.hpp"
 #include "lobby_preferences.hpp"
+#include "credentials.hpp"
 #include "log.hpp"
 #include "scripting/plugins/manager.hpp"
 

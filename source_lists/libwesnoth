@@ -1,5 +1,6 @@
 arrow.cpp
 construct_dialog.cpp
+credentials.cpp
 cursor.cpp
 desktop/clipboard.cpp
 display.cpp
