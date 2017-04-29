@@ -69,7 +69,7 @@ mp_login::mp_login(const std::string& host, const std::string& label, const bool
 	: host_(host), focus_password_(focus_password)
 {
 	register_label("login_label", false, label);
-	user_ = register_text("user_name", true,
+	username_ = register_text("user_name", true,
 		&preferences::login,
 		&preferences::set_login,
 		!focus_password);
@@ -81,12 +81,14 @@ mp_login::mp_login(const std::string& host, const std::string& label, const bool
 
 void mp_login::load_password(window& win) const
 {
-	find_widget<text_box>(&win, "password", false).set_value(preferences::password(host_, user_->get_widget_value(win)));
+	text_box& pwd = find_widget<text_box>(&win, "password", false);
+	pwd.set_value(preferences::password(host_, username_->get_widget_value(win)));
 }
 
 void mp_login::save_password(window& win) const
 {
-	preferences::set_password(host_, user_->get_widget_value(win), find_widget<password_box>(&win, "password", false).get_real_value());
+	password_box& pwd = find_widget<password_box>(&win, "password", false);
+	preferences::set_password(host_, username_->get_widget_value(win), pwd.get_real_value());
 }
 
 void mp_login::pre_show(window& win)

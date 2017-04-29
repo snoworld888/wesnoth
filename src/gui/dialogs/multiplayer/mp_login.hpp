@@ -43,7 +43,7 @@ private:
 	void save_password(window& win) const;
 
 	const std::string host_;
-	field_text* user_;
+	field_text* username_;
 	bool focus_password_;
 };
 

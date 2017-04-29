@@ -193,7 +193,7 @@ namespace preferences {
 // TODO: No idea if this is a reasonable way of generating the key.
 std::string build_key(const std::string& server, const std::string& login) {
 	std::ostringstream out;
-	out << '\x2' << login << "\x3wesnoth\x5" << server << '\x7' << get_system_username() << '\xb';
+	out << login << get_system_username() << server;
 	return out.str();
 }
 
