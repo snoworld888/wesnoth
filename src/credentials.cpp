@@ -37,7 +37,8 @@ static std::string build_key(const std::string& server, const std::string& login
 static std::string escape(const std::string& text);
 static std::string unescape(const std::string& text);
 
-static std::string get_system_username() {
+static std::string get_system_username()
+{
 	std::string res;
 #ifdef _WIN32
 	wchar_t buffer[300];
@@ -57,7 +58,8 @@ static std::string get_system_username() {
 
 static const std::string EMPTY_LOGIN = "@@";
 
-namespace preferences {
+namespace preferences
+{
 	std::string login()
 	{
 		std::string name = preferences::get("login", EMPTY_LOGIN);
@@ -79,11 +81,13 @@ namespace preferences {
 		preferences::set("login", '@' + login + '@');
 	}
 
-	bool remember_password() {
+	bool remember_password()
+	{
 		return preferences::get("remember_password", false);
 	}
 
-	void set_remember_password(bool remember) {
+	void set_remember_password(bool remember)
+	{
 		preferences::set("remember_password", remember);
 
 		std::fill(credentials.begin(), credentials.end(), '\0');
@@ -191,7 +195,8 @@ namespace preferences {
 }
 
 // TODO: No idea if this is a reasonable way of generating the key.
-std::string build_key(const std::string& server, const std::string& login) {
+std::string build_key(const std::string& server, const std::string& login)
+{
 	std::ostringstream out;
 	out << login << get_system_username() << server;
 	return out.str();
@@ -217,7 +222,8 @@ std::string decrypt(const std::string& text, const std::string& key)
 	return xor_crypt(text, key);
 }
 
-std::string unescape(const std::string& text) {
+std::string unescape(const std::string& text)
+{
 	std::string unescaped;
 	unescaped.reserve(text.size());
 	bool escaping = false;
@@ -238,7 +244,8 @@ std::string unescape(const std::string& text) {
 	return unescaped;
 }
 
-std::string escape(const std::string& text) {
+std::string escape(const std::string& text)
+{
 	std::string escaped;
 	escaped.reserve(text.size());
 	for(char c : text) {
