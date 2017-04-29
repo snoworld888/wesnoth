@@ -17,6 +17,7 @@ See the COPYING file for more details.
 #include "serialization/unicode.hpp"
 #include "filesystem.hpp"
 #include "log.hpp"
+#include "serialization/string_utils.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -29,7 +30,18 @@ See the COPYING file for more details.
 static lg::log_domain log_config("config");
 #define ERR_CFG LOG_STREAM(err , log_config)
 
-static std::string credentials;
+struct login_info
+{
+	std::string username, server, key;
+	login_info(const std::string& username, const std::string& server, const std::string& key)
+		: username(username), server(server), key(key)
+	{}
+};
+
+static std::vector<login_info> credentials;
+
+// Separate password entries with formfeed
+static const char CREDENTIAL_SEPARATOR = '\f';
 
 static std::string encrypt(const std::string& text, const std::string& key);
 static std::string decrypt(const std::string& text, const std::string& key);
@@ -54,6 +66,18 @@ static std::string get_system_username()
 	}
 #endif
 	return res;
+}
+
+static void clear_credentials()
+{
+	// Zero them before clearing.
+	// Probably overly paranoid, but doesn't hurt?
+	for(auto& cred : credentials) {
+		std::fill(cred.username.begin(), cred.username.end(), '\0');
+		std::fill(cred.server.begin(), cred.server.end(), '\0');
+		std::fill(cred.key.begin(), cred.key.end(), '\0');
+	}
+	credentials.clear();
 }
 
 static const std::string EMPTY_LOGIN = "@@";
@@ -90,78 +114,46 @@ namespace preferences
 	{
 		preferences::set("remember_password", remember);
 
-		std::fill(credentials.begin(), credentials.end(), '\0');
 		if(remember) {
 			load_credentials();
 		} else {
-			credentials.clear();
+			clear_credentials();
 		}
 	}
 
 	std::string password(const std::string& server, const std::string& login)
 	{
 		if(!remember_password()) {
-			return decrypt(credentials, build_key(server, login));
+			if(!credentials.empty() && credentials[0].username == login && credentials[0].server == server) {
+				return decrypt(credentials[0].key, build_key(server, login));
+			} else {
+				return "";
+			}
 		}
-		std::string lookup = '\xc' + login + '@' + server + '=';
-		assert(lookup.back() == 0);
-		std::string temp = decrypt(credentials, build_key("*.*", get_system_username()));
-		size_t pos = temp.find(lookup);
-		// Example:
-		// temp = "\xcabc@xyz.org\0uuuuuu\xcxyz@abc.net\0uuuuuu\xc"
-		// lookup = "\xcxyz@abc.net\0"
-		// pos = 19
-		// lookup.size() = 13
-		// pos2 = 38
-		// pos2 - pos - lookup.size() = 6
-		if(pos == std::string::npos) {
-			std::fill(temp.begin(), temp.end(), '\0');
+		auto cred = std::find_if(credentials.begin(), credentials.end(), [&](const login_info& cred) {
+			return cred.server == server && cred.username == login;
+		});
+		if(cred == credentials.end()) {
 			return "";
 		}
-		size_t pos2 = temp.find('\xc', pos + lookup.size() - 1);
-		if(pos2 == std::string::npos) {
-			std::fill(temp.begin(), temp.end(), '\0');
-			return "";
-		}
-		std::string pass = temp.substr(pos + lookup.size(), pos2 - pos - lookup.size());
-		std::fill(temp.begin(), temp.end(), '\0');
-		return decrypt(unescape(pass), build_key(server, login));
+		return decrypt(unescape(cred->key), build_key(server, login));
 	}
 
 	void set_password(const std::string& server, const std::string& login, const std::string& key)
 	{
 		if(!remember_password()) {
-			credentials = encrypt(key, build_key(server, login));
+			clear_credentials();
+			credentials.emplace_back(login, server, encrypt(key, build_key(server, login)));
 			return;
 		}
-		std::string lookup = '\xc' + login + '@' + server + '=';
-		assert(lookup.back() == 0);
-		std::string temp = decrypt(credentials, build_key("*.*", get_system_username()));
-		std::string pass = escape(encrypt(key, build_key(server, login)));
-		size_t pos = temp.find(lookup);
-		if(pos == std::string::npos) {
-			while(!temp.empty() && temp.back() == '\xc') {
-				temp.pop_back();
-			}
-			std::copy(lookup.begin(), lookup.end(), std::back_inserter(temp));
-			std::copy(pass.begin(), pass.end(), std::back_inserter(temp));
-			temp.push_back('\xc');
-			credentials = encrypt(temp, build_key("*.*", get_system_username()));
-			std::fill(temp.begin(), temp.end(), '\0');
-			return;
+		auto cred = std::find_if(credentials.begin(), credentials.end(), [&](const login_info& cred) {
+			return cred.server == server && cred.username == login;
+		});
+		if(cred == credentials.end()) {
+			// This is equivalent to emplace_back, but also returns the iterator to the new element
+			cred = credentials.emplace(credentials.end(), login, server, "");
 		}
-		size_t pos2 = temp.find('\xc', pos + lookup.size() - 1);
-		if(pos2 == std::string::npos) {
-			// TODO: Not sure if this is the right thing to do in this case (or if there's even anything that CAN be done in this case)
-			std::copy(pass.begin(), pass.end(), std::back_inserter(temp));
-			temp.push_back('\xc');
-			credentials = encrypt(temp, build_key("*.*", get_system_username()));
-			std::fill(temp.begin(), temp.end(), '\0');
-			return;
-		}
-		temp.replace(pos + lookup.size(), pos2 - pos - lookup.size(), pass);
-		credentials = encrypt(temp, build_key("*.*", get_system_username()));
-		std::fill(temp.begin(), temp.end(), '\0');
+		cred->key = escape(encrypt(key, build_key(server, login)));
 	}
 
 	void load_credentials()
@@ -169,14 +161,32 @@ namespace preferences
 		if(!remember_password()) {
 			return;
 		}
-		// Credentials are in a different file, which is a binary blob
-		filesystem::scoped_istream stream = filesystem::istream_file(filesystem::get_credentials_file(), false);
+		clear_credentials();
+		std::string cred_file = filesystem::get_credentials_file();
+		if(!filesystem::file_exists(cred_file)) {
+			return;
+		}
+		filesystem::scoped_istream stream = filesystem::istream_file(cred_file, false);
+		// Credentials file is a binary blob, so use streambuf iterator
 		stream->seekg(0, std::ios::end);
-		credentials.clear();
 		credentials.reserve(stream->tellg());
 		stream->seekg(0, std::ios::beg);
 		stream->clear();
-		credentials.assign(std::istreambuf_iterator<char>(*stream), std::istreambuf_iterator<char>());
+		std::string data((std::istreambuf_iterator<char>(*stream)), (std::istreambuf_iterator<char>()));
+		data = decrypt(data, build_key("*.*", get_system_username()));
+		if(data.empty() || data[0] != CREDENTIAL_SEPARATOR) {
+			ERR_CFG << "Invalid data in credentials file\n";
+			std::fill(data.begin(), data.end(), '\0');
+			return;
+		}
+		for(const std::string elem : utils::split(data, CREDENTIAL_SEPARATOR, utils::REMOVE_EMPTY)) {
+			size_t at = elem.find_first_of('@');
+			size_t eq = elem.find_first_of('=');
+			if(at != std::string::npos && eq != std::string::npos) {
+				credentials.emplace_back(data.substr(0, at), data.substr(at + 1, eq - at - 1), data.substr(eq + 1));
+			}
+		}
+		std::fill(data.begin(), data.end(), '\0');
 	}
 
 	void save_credentials()
@@ -184,7 +194,15 @@ namespace preferences
 		if(remember_password()) {
 			try {
 				filesystem::scoped_ostream credentials_file = filesystem::ostream_file(filesystem::get_credentials_file());
-				std::copy(credentials.begin(), credentials.end(), std::ostreambuf_iterator<char>(*credentials_file));
+				for(const auto& cred : credentials) {
+					credentials_file->put(CREDENTIAL_SEPARATOR);
+					std::copy(cred.username.begin(), cred.username.end(), std::ostreambuf_iterator<char>(*credentials_file));
+					credentials_file->put('@');
+					std::copy(cred.server.begin(), cred.server.end(), std::ostreambuf_iterator<char>(*credentials_file));
+					credentials_file->put('=');
+					std::copy(cred.key.begin(), cred.key.end(), std::ostreambuf_iterator<char>(*credentials_file));
+				}
+				credentials_file->put(CREDENTIAL_SEPARATOR);
 			} catch(filesystem::io_exception&) {
 				ERR_CFG << "error writing to credentials file '" << filesystem::get_credentials_file() << "'" << std::endl;
 			}
@@ -194,7 +212,7 @@ namespace preferences
 	}
 }
 
-// TODO: No idea if this is a reasonable way of generating the key.
+// TODO: Key-stretching (would hashing the key with SHA512 or something work? bcrypt was recommended though)
 std::string build_key(const std::string& server, const std::string& login)
 {
 	std::ostringstream out;
@@ -203,6 +221,7 @@ std::string build_key(const std::string& server, const std::string& login)
 }
 
 // FIXME: XOR encryption is a really terrible choice - swap it out for something better!
+// TODO: Maybe use cryptopp or something for AES encryption?
 static std::string xor_crypt(std::string text, const std::string& key)
 {
 	const size_t m = key.size();
