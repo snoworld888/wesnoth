@@ -17,7 +17,7 @@ else
 	sudo apt-get install -qq libboost-filesystem-dev libboost-iostreams-dev libboost-random-dev libboost-program-options-dev libboost-regex-dev libboost-system-dev libboost-test-dev libboost-locale-dev libboost-thread-dev
 	sudo apt-get install -qq libcairo2-dev libfribidi-dev libpango1.0-dev
 	sudo apt-get install -qq libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libvorbis-dev
-	sudo apt-get install gdb moreutils xvfb libcrypto++9
+	sudo apt-get install gdb moreutils xvfb libcrypto++-dev
 
 	if [ "$USE_CMAKE" = true  ]; then
 		sudo apt-get install -qq cmake;
