@@ -168,10 +168,6 @@ namespace preferences
 		}
 		filesystem::scoped_istream stream = filesystem::istream_file(cred_file, false);
 		// Credentials file is a binary blob, so use streambuf iterator
-		stream->seekg(0, std::ios::end);
-		credentials.reserve(stream->tellg());
-		stream->seekg(0, std::ios::beg);
-		stream->clear();
 		std::string data((std::istreambuf_iterator<char>(*stream)), (std::istreambuf_iterator<char>()));
 		data = decrypt(data, build_key("global", get_system_username()));
 		if(data.empty() || data[0] != CREDENTIAL_SEPARATOR) {
@@ -183,7 +179,7 @@ namespace preferences
 			size_t at = elem.find_first_of('@');
 			size_t eq = elem.find_first_of('=');
 			if(at != std::string::npos && eq != std::string::npos) {
-				credentials.emplace_back(data.substr(0, at), data.substr(at + 1, eq - at - 1), data.substr(eq + 1));
+				credentials.emplace_back(elem.substr(0, at), elem.substr(at + 1, eq - at - 1), elem.substr(eq + 1));
 			}
 		}
 		std::fill(data.begin(), data.end(), '\0');
