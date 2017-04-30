@@ -176,8 +176,8 @@ namespace preferences
 			return;
 		}
 		for(const std::string elem : utils::split(data, CREDENTIAL_SEPARATOR, utils::REMOVE_EMPTY)) {
-			size_t at = elem.find_first_of('@');
-			size_t eq = elem.find_first_of('=');
+			size_t at = elem.find_last_of('@');
+			size_t eq = elem.find_first_of('=', at + 1);
 			if(at != std::string::npos && eq != std::string::npos) {
 				credentials.emplace_back(elem.substr(0, at), elem.substr(at + 1, eq - at - 1), elem.substr(eq + 1));
 			}
@@ -252,6 +252,8 @@ std::string unescape(const std::string& text)
 		if(escaping) {
 			if(c == '\xa') {
 				unescaped.push_back('\xc');
+			} else if(c == '.') {
+				unescaped.push_back('@');
 			} else {
 				unescaped.push_back(c);
 			}
@@ -275,6 +277,8 @@ std::string escape(const std::string& text)
 			escaped += "\x1\x1";
 		} else if(c == '\xc') {
 			escaped += "\x1\xa";
+		} else if(c == '@') {
+			escaped += "\x1.";
 		} else {
 			escaped.push_back(c);
 		}
