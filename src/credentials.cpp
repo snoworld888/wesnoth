@@ -173,7 +173,7 @@ namespace preferences
 		stream->seekg(0, std::ios::beg);
 		stream->clear();
 		std::string data((std::istreambuf_iterator<char>(*stream)), (std::istreambuf_iterator<char>()));
-		data = decrypt(data, build_key("*.*", get_system_username()));
+		data = decrypt(data, build_key("global", get_system_username()));
 		if(data.empty() || data[0] != CREDENTIAL_SEPARATOR) {
 			ERR_CFG << "Invalid data in credentials file\n";
 			std::fill(data.begin(), data.end(), '\0');
@@ -192,27 +192,33 @@ namespace preferences
 	void save_credentials()
 	{
 		if(remember_password()) {
+			std::ostringstream credentials_data;
+			for(const auto& cred : credentials) {
+				credentials_data.put(CREDENTIAL_SEPARATOR);
+				std::copy(cred.username.begin(), cred.username.end(), std::ostreambuf_iterator<char>(credentials_data));
+				credentials_data.put('@');
+				std::copy(cred.server.begin(), cred.server.end(), std::ostreambuf_iterator<char>(credentials_data));
+				credentials_data.put('=');
+				std::copy(cred.key.begin(), cred.key.end(), std::ostreambuf_iterator<char>(credentials_data));
+			}
+			credentials_data.put(CREDENTIAL_SEPARATOR);
 			try {
 				filesystem::scoped_ostream credentials_file = filesystem::ostream_file(filesystem::get_credentials_file());
-				for(const auto& cred : credentials) {
-					credentials_file->put(CREDENTIAL_SEPARATOR);
-					std::copy(cred.username.begin(), cred.username.end(), std::ostreambuf_iterator<char>(*credentials_file));
-					credentials_file->put('@');
-					std::copy(cred.server.begin(), cred.server.end(), std::ostreambuf_iterator<char>(*credentials_file));
-					credentials_file->put('=');
-					std::copy(cred.key.begin(), cred.key.end(), std::ostreambuf_iterator<char>(*credentials_file));
-				}
-				credentials_file->put(CREDENTIAL_SEPARATOR);
+				std::string encrypted = encrypt(credentials_data.str(), build_key("global", get_system_username()));
+				credentials_file->write(encrypted.c_str(), encrypted.size());
 			} catch(filesystem::io_exception&) {
 				ERR_CFG << "error writing to credentials file '" << filesystem::get_credentials_file() << "'" << std::endl;
 			}
+			size_t n = credentials_data.tellp();
+			credentials_data.seekp(0, std::ios::beg);
+			std::fill_n(std::ostreambuf_iterator<char>(credentials_data), n, '\0');
 		} else {
 			filesystem::delete_file(filesystem::get_credentials_file());
 		}
 	}
 }
 
-// TODO: Key-stretching (would hashing the key with SHA512 or something work? bcrypt was recommended though)
+// TODO: Key-stretching (bcrypt was recommended)
 std::string build_key(const std::string& server, const std::string& login)
 {
 	std::ostringstream out;
@@ -260,6 +266,7 @@ std::string unescape(const std::string& text)
 			unescaped.push_back(c);
 		}
 	}
+	assert(!escaping);
 	return unescaped;
 }
 
