@@ -336,6 +336,8 @@ if env["prereqs"]:
     conf.CheckLib("m")
     conf.CheckFunc("round")
 
+    conf.CheckLib("cryptopp")
+
     def CheckIEEE754(conf):
         if not env["host"]:
             return conf.CheckIEEE754()
