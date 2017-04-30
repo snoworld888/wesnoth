@@ -382,7 +382,7 @@ if env["prereqs"]:
     have_client_prereqs = have_server_prereqs & have_sdl_other() & \
         (('TRAVIS' in os.environ and os.environ["TRAVIS_OS_NAME"] == "osx") or (conf.CheckLib("vorbisfile") & \
         conf.CheckOgg())) & \
-		conf.CheckLib("libcrypto++") & \
+		conf.CheckLib("crypto++") & \
         conf.CheckPNG() & \
         conf.CheckJPG() & \
         conf.CheckPango("cairo", require_version = "1.21.3") & \
