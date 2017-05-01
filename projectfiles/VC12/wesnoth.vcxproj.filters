@@ -998,9 +998,6 @@
     <ClCompile Include="..\..\src\utils\name_generator_factory.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\utils\sha1.cpp">
-      <Filter>utils</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\serialization\tag.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
@@ -2475,9 +2472,6 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\utils\reference_counter.hpp">
-      <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\utils\sha1.hpp">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\utils\smart_list.hpp">
