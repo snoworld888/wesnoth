@@ -21,6 +21,10 @@
 
 namespace utils {
 
+template<size_t len>
+std::string encode_hash(const std::array<uint8_t, len>& input);
+
+namespace md5 {
 /**
  * Returns the MD5 digest for the specified input.
  *
@@ -28,12 +32,18 @@ namespace utils {
  *       the raw MD5 value, not a null-terminated string. Use encode_hash if
  *       you need the text representation instead.
  */
-std::array<uint8_t, 16> md5(const std::string& input);
+std::array<uint8_t, 16> calc(const std::string& input);
 int get_iteration_count(const std::string& hash);
 std::string get_salt(const std::string& hash);
 bool is_valid_hash(const std::string& hash);
-std::string encode_hash(const std::array<uint8_t, 16>& input);
 std::string create_hash(const std::string& password, const std::string& salt, int iteration_count =10);
+}
+template std::string encode_hash<16>(const std::array<uint8_t, 16>& input);
+
+namespace sha1 {
+std::array<uint8_t, 20> calc(const std::string& input);
+}
+template std::string encode_hash<20>(const std::array<uint8_t, 20>& input);
 
 } // namespace utils
 

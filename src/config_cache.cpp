@@ -19,7 +19,7 @@
 #include "gettext.hpp"
 #include "game_config.hpp"
 #include "log.hpp"
-#include <openssl/sha.h>
+#include "hash.hpp"
 #include "serialization/binary_or_text.hpp"
 #include "serialization/parser.hpp"
 #include "serialization/string_utils.hpp"
@@ -134,23 +134,6 @@ void config_cache::read_configs(const std::string& file_path, config& cfg, prepr
 	read(cfg, *stream);
 }
 
-static std::string sha1_hash(const std::string& str)
-{
-	unsigned char hash[SHA_DIGEST_LENGTH];
-	SHA_CTX hasher;
-	SHA_Init(&hasher);
-	SHA_Update(&hasher, str.c_str(), str.size());
-	SHA_Final(hash, &hasher);
-	std::ostringstream out;
-	out << std::hex;
-	for(unsigned char c : hash) {
-		out.fill('0');
-		out.width(2);
-		out << static_cast<int>(c);
-	}
-	return out.str();
-}
-
 void config_cache::read_cache(const std::string& file_path, config& cfg)
 {
 	static const std::string extension = ".gz";
@@ -183,7 +166,7 @@ void config_cache::read_cache(const std::string& file_path, config& cfg)
 		// Use a hash for a shorter display of the defines.
 		const std::string fname = cache_path + "/" +
 								  cache_file_prefix_ +
-								  sha1_hash(defines_string.str());
+								  utils::encode_hash(utils::sha1::calc(defines_string.str()));
 		const std::string fname_checksum = fname + ".checksum" + extension;
 
 		filesystem::file_tree_checksum dir_checksum;

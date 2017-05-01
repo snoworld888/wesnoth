@@ -226,8 +226,8 @@ static std::unique_ptr<wesnothd_connection> open_connection(CVideo& video, const
 								throw wesnothd_error(_("Bad data received from server"));
 							}
 
-							sp["password"] = utils::create_hash(utils::create_hash(password, utils::get_salt(salt),
-									utils::get_iteration_count(salt)), salt.substr(12, 8));
+							sp["password"] = utils::md5::create_hash(utils::md5::create_hash(password, utils::md5::get_salt(salt),
+									utils::md5::get_iteration_count(salt)), salt.substr(12, 8));
 
 						} else {
 							sp["password"] = password;

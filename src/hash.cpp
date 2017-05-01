@@ -12,33 +12,46 @@
    See the COPYING file for more details.
 */
 
+#include "hash.hpp"
+
 #include <iostream>
 #include <string>
 
-#include "md5.hpp"
-#include "hash.hpp"
+#include <openssl/sha.h>
+#include <openssl/md5.h>
 
 namespace utils {
+
+std::array<uint8_t, SHA_DIGEST_LENGTH> sha1::calc(const std::string& str) {
+	std::array<uint8_t, SHA_DIGEST_LENGTH> hash;
+	SHA_CTX hasher;
+	SHA_Init(&hasher);
+	SHA_Update(&hasher, str.data(), str.size());
+	SHA_Final(hash.data(), &hasher);
+	return hash;
+}
 
 const std::string itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ;
 const std::string hash_prefix = "$H$";
 
-std::array<uint8_t, 16> md5(const std::string& input) {
-	MD5 md5_worker;
-	md5_worker.update(reinterpret_cast<const uint8_t*>(input.data()), input.size());
-	md5_worker.finalize();
-	return md5_worker.raw_digest();
+std::array<uint8_t, MD5_DIGEST_LENGTH> md5::calc(const std::string& input) {
+	std::array<uint8_t, MD5_DIGEST_LENGTH> hash;
+	MD5_CTX md5_worker;
+	MD5_Init(&md5_worker);
+	MD5_Update(&md5_worker, input.data(), input.size());
+	MD5_Final(hash.data(), &md5_worker);
+	return hash;
 }
 
-int get_iteration_count(const std::string& hash) {
+int md5::get_iteration_count(const std::string& hash) {
 	return itoa64.find_first_of(hash[3]);
 }
 
-std::string get_salt(const std::string& hash) {
+std::string md5::get_salt(const std::string& hash) {
 	return hash.substr(4,8);
 }
 
-bool is_valid_hash(const std::string& hash) {
+bool md5::is_valid_hash(const std::string& hash) {
 	if(hash.size() != 34) return false;
 	if(hash.substr(0,3) != hash_prefix) return false;
 
@@ -48,35 +61,36 @@ bool is_valid_hash(const std::string& hash) {
 	return true;
 }
 
-std::string encode_hash(const std::array<uint8_t, 16>& input) {
+template<size_t len>
+std::string encode_hash(const std::array<uint8_t, len>& input) {
 	std::string encoded_hash;
 
 	unsigned int i = 0;
 	do {
 		unsigned value = input[i++];
 		encoded_hash.append(itoa64.substr(value & 0x3f,1));
-		if(i < 16)
+		if(i < len)
 			value |= static_cast<int>(input[i]) << 8;
 		encoded_hash.append(itoa64.substr((value >> 6) & 0x3f,1));
-		if(i++ >= 16)
+		if(i++ >= len)
 			break;
-		if(i < 16)
+		if(i < len)
 			value |= static_cast<int>(input[i]) << 16;
 		encoded_hash.append(itoa64.substr((value >> 12) & 0x3f,1));
-		if(i++ >= 16)
+		if(i++ >= len)
 			break;
 		encoded_hash.append(itoa64.substr((value >> 18) & 0x3f,1));
-	} while (i < 16);
+	} while (i < len);
 
 	return encoded_hash;
 }
 
-std::string create_hash(const std::string& password, const std::string& salt, int iteration_count) {
+std::string md5::create_hash(const std::string& password, const std::string& salt, int iteration_count) {
 	iteration_count = 1 << iteration_count;
 
-	std::array<uint8_t, 16> output = md5(salt + password);
+	std::array<uint8_t, 16> output = md5::calc(salt + password);
 	do {
-		output = md5(std::string(output.begin(), output.end()).append(password));
+		output = md5::calc(std::string(output.begin(), output.end()).append(password));
 	} while(--iteration_count);
 
 	return encode_hash(output);
