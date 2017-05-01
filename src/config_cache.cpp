@@ -19,7 +19,7 @@
 #include "gettext.hpp"
 #include "game_config.hpp"
 #include "log.hpp"
-#include <crypto++/sha.h>
+#include <openssl/sha.h>
 #include "serialization/binary_or_text.hpp"
 #include "serialization/parser.hpp"
 #include "serialization/string_utils.hpp"
@@ -136,9 +136,11 @@ void config_cache::read_configs(const std::string& file_path, config& cfg, prepr
 
 static std::string sha1_hash(const std::string& str)
 {
-	CryptoPP::SHA1 hasher;
-	unsigned char hash[CryptoPP::SHA1::DIGESTSIZE];
-	hasher.CalculateDigest(hash, reinterpret_cast<const unsigned char*>(str.c_str()), str.size());
+	unsigned char hash[SHA_DIGEST_LENGTH];
+	SHA_CTX hasher;
+	SHA_Init(&hasher);
+	SHA_Update(&hasher, str.c_str(), str.size());
+	SHA_Final(hash, &hasher);
 	std::ostringstream out;
 	out << std::hex;
 	for(unsigned char c : hash) {
